@@ -1,0 +1,37 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    ":disableRateLimiting",
+    ":semanticCommits",
+    ":automergePr",
+    ":automergeRequireAllStatusChecksMust",
+  ],
+  dependencyDashboard: true,
+  dependencyDashboardTitle: "Renovate Dashboard 🤖",
+  suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
+  enabledManagers: ["github-actions", "custom.regex"],
+  customManagers: [
+    {
+      description: "Track TimescaleDB PGDG package version",
+      customType: "regex",
+      managerFilePatterns: ["build.yaml"],
+      matchStrings: [
+        "\\/\\/\\s*renovate:\\s*?(suite=(?<suite>.*?))?\\s*depName=(?<depName>.*?)\\nversion:\\s+\"?(?<currentValue>[^\"\\n]+)\"?",
+      ],
+      registryUrlTemplate:
+        "https://download.postgresql.org/pub/repos/apt?suite={{#if suite}}{{suite}}{{else}}stable{{/if}}&components=main&binaryArch=amd64",
+      datasourceTemplate: "deb",
+    },
+  ],
+  packageRules: [
+    {
+      description: "Auto-merge TimescaleDB updates",
+      matchFileNames: ["build.yaml"],
+      automerge: true,
+      automergeType: "pr",
+      semanticCommitScope: "timescaledb",
+      semanticCommitType: "release",
+    },
+  ],
+}

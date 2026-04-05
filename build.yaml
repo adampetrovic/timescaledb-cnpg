@@ -1,0 +1,3 @@
+# TimescaleDB PGDG package version for postgresql-18-timescaledb
+# renovate: suite=trixie-pgdg depName=postgresql-18-timescaledb
+version: "2.26.1+dfsg-1.pgdg13+1"

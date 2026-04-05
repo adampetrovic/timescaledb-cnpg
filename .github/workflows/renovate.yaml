@@ -1,0 +1,48 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Renovate
+
+on:
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: Dry Run
+        default: "false"
+        required: false
+      logLevel:
+        description: Log Level
+        default: debug
+        required: false
+  schedule:
+    - cron: "0 */6 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - .renovaterc.json5
+
+concurrency:
+  group: renovate
+
+env:
+  WORKFLOW_DRY_RUN: false
+  WORKFLOW_LOG_LEVEL: debug
+  WORKFLOW_RENOVATE_VERSION: 40.14.4
+
+jobs:
+  renovate:
+    name: Renovate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Renovate
+        uses: renovatebot/github-action@7a7f92007030b5f5d29f63a0b918cf13bde95b8c # v41.1.0
+        with:
+          configurationFile: .renovaterc.json5
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          renovate-version: "${{ env.WORKFLOW_RENOVATE_VERSION }}"
+        env:
+          LOG_LEVEL: "${{ inputs.logLevel || env.WORKFLOW_LOG_LEVEL }}"
+          RENOVATE_DRY_RUN: "${{ inputs.dryRun || env.WORKFLOW_DRY_RUN }}"

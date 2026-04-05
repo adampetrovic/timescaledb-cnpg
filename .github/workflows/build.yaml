@@ -1,0 +1,88 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Build & Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - build.yaml
+      - .github/workflows/build.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - pg_major: "18"
+            base_tag: "18-minimal-trixie"
+            debian: trixie
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Parse Build Config
+        id: config
+        run: |
+          # Full PGDG version (e.g. 2.26.1+dfsg-1.pgdg13+1)
+          FULL_VERSION=$(grep '^version:' build.yaml | awk '{print $2}' | tr -d '"')
+
+          # Extract semver for image tag (e.g. 2.26.1)
+          SQL_VERSION=$(echo "${FULL_VERSION}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')
+
+          echo "full_version=${FULL_VERSION}"
+          echo "sql_version=${SQL_VERSION}"
+          echo "full_version=${FULL_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "sql_version=${SQL_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: Login to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push
+        id: push
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          build-args: |
+            BASE=ghcr.io/cloudnative-pg/postgresql:${{ matrix.base_tag }}
+            PG_MAJOR=${{ matrix.pg_major }}
+            EXT_VERSION=${{ steps.config.outputs.full_version }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.config.outputs.sql_version }}-${{ matrix.pg_major }}-${{ matrix.debian }}
+
+      - name: Summary
+        run: |
+          TAG="${{ steps.config.outputs.sql_version }}-${{ matrix.pg_major }}-${{ matrix.debian }}"
+          DIGEST="${{ steps.push.outputs.digest }}"
+          echo "### ✅ Published \`timescaledb-cnpg\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Image** | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Digest** | \`${DIGEST}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **TimescaleDB** | ${{ steps.config.outputs.sql_version }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **PostgreSQL** | ${{ matrix.pg_major }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Debian** | ${{ matrix.debian }} |" >> "$GITHUB_STEP_SUMMARY"
