@@ -13,15 +13,13 @@
   enabledManagers: ["github-actions", "custom.regex"],
   customManagers: [
     {
-      description: "Track TimescaleDB PGDG package version",
+      description: "Track TimescaleDB version via timescaledb-ha Docker image tags",
       customType: "regex",
       managerFilePatterns: ["build.yaml"],
       matchStrings: [
-        "\\/\\/\\s*renovate:\\s*?(suite=(?<suite>.*?))?\\s*depName=(?<depName>.*?)\\nversion:\\s+\"?(?<currentValue>[^\"\\n]+)\"?",
+        "datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s+versioning=(?<versioning>\\S+)\\nversion:\\s+\"?(?<currentValue>[^\"\\n]+)\"?",
       ],
-      registryUrlTemplate:
-        "https://download.postgresql.org/pub/repos/apt?suite={{#if suite}}{{suite}}{{else}}stable{{/if}}&components=main&binaryArch=amd64",
-      datasourceTemplate: "deb",
+      extractVersionTemplate: "^pg\\d+[^-]*-ts(?<version>.+)$",
     },
   ],
   packageRules: [

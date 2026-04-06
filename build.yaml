@@ -1,3 +1,4 @@
-# TimescaleDB PGDG package version for postgresql-18-timescaledb
-# renovate: suite=trixie-pgdg depName=postgresql-18-timescaledb
-version: "2.26.1+dfsg-1.pgdg13+1"
+# TimescaleDB version from Timescale's packagecloud apt repo
+# Package: timescaledb-2-<version>-postgresql-18
+# renovate: datasource=docker depName=mirror.gcr.io/timescale/timescaledb-ha versioning=loose
+version: "2.26.1"

@@ -38,16 +38,9 @@ jobs:
       - name: Parse Build Config
         id: config
         run: |
-          # Full PGDG version (e.g. 2.26.1+dfsg-1.pgdg13+1)
-          FULL_VERSION=$(grep '^version:' build.yaml | awk '{print $2}' | tr -d '"')
-
-          # Extract semver for image tag (e.g. 2.26.1)
-          SQL_VERSION=$(echo "${FULL_VERSION}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')
-
-          echo "full_version=${FULL_VERSION}"
-          echo "sql_version=${SQL_VERSION}"
-          echo "full_version=${FULL_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "sql_version=${SQL_VERSION}" >> "$GITHUB_OUTPUT"
+          VERSION=$(grep '^version:' build.yaml | awk '{print $2}' | tr -d '"')
+          echo "version=${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
@@ -69,13 +62,13 @@ jobs:
           build-args: |
             BASE=ghcr.io/cloudnative-pg/postgresql:${{ matrix.base_tag }}
             PG_MAJOR=${{ matrix.pg_major }}
-            EXT_VERSION=${{ steps.config.outputs.full_version }}
+            EXT_VERSION=${{ steps.config.outputs.version }}
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.config.outputs.sql_version }}-${{ matrix.pg_major }}-${{ matrix.debian }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.config.outputs.version }}-${{ matrix.pg_major }}-${{ matrix.debian }}
 
       - name: Summary
         run: |
-          TAG="${{ steps.config.outputs.sql_version }}-${{ matrix.pg_major }}-${{ matrix.debian }}"
+          TAG="${{ steps.config.outputs.version }}-${{ matrix.pg_major }}-${{ matrix.debian }}"
           DIGEST="${{ steps.push.outputs.digest }}"
           echo "### ✅ Published \`timescaledb-cnpg\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -83,6 +76,6 @@ jobs:
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Image** | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Digest** | \`${DIGEST}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **TimescaleDB** | ${{ steps.config.outputs.sql_version }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **TimescaleDB** | ${{ steps.config.outputs.version }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **PostgreSQL** | ${{ matrix.pg_major }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Debian** | ${{ matrix.debian }} |" >> "$GITHUB_STEP_SUMMARY"
