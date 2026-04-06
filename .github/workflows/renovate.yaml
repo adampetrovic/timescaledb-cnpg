@@ -21,6 +21,11 @@ on:
     paths:
       - .renovaterc.json5
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 concurrency:
   group: renovate
 
@@ -46,3 +51,4 @@ jobs:
         env:
           LOG_LEVEL: "${{ inputs.logLevel || env.WORKFLOW_LOG_LEVEL }}"
           RENOVATE_DRY_RUN: "${{ inputs.dryRun || env.WORKFLOW_DRY_RUN }}"
+          RENOVATE_REPOSITORIES: "${{ github.repository }}"
