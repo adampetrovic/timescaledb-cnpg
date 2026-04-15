@@ -1,4 +1,4 @@
 # TimescaleDB version from Timescale's packagecloud apt repo
 # Package: timescaledb-2-<version>-postgresql-18
 # renovate: datasource=docker depName=mirror.gcr.io/timescale/timescaledb-ha versioning=loose
-version: "2.26.1"
+version: "2.26.2"
