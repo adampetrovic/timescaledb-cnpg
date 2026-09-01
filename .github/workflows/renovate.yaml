@@ -3,52 +3,70 @@
 name: Renovate
 
 on:
+  push:
+    branches: ["main"]
+    paths:
+      - .renovaterc.json5
+  schedule:
+    - cron: "0 */6 * * *"
   workflow_dispatch:
     inputs:
       dryRun:
         description: Dry Run
-        default: "false"
-        required: false
+        type: boolean
+        default: false
+        required: true
       logLevel:
         description: Log Level
+        type: choice
         default: debug
-        required: false
-  schedule:
-    - cron: "0 */6 * * *"
-  push:
-    branches:
-      - main
-    paths:
-      - .renovaterc.json5
-
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+        options:
+          - debug
+          - info
+        required: true
+      version:
+        description: Renovate Version
+        default: latest
+        required: true
 
 concurrency:
-  group: renovate
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
 
-env:
-  WORKFLOW_DRY_RUN: false
-  WORKFLOW_LOG_LEVEL: debug
-  WORKFLOW_RENOVATE_VERSION: 40.14.4
+permissions:
+  contents: read
 
 jobs:
   renovate:
     name: Renovate
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Renovate
-        uses: renovatebot/github-action@3633cede7d4d4598438e654eac4a695e46004420 # v46.1.7
+      - name: Generate Token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
         with:
-          configurationFile: .renovaterc.json5
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          renovate-version: "${{ env.WORKFLOW_RENOVATE_VERSION }}"
+          app-id: "${{ secrets.BOT_APP_ID }}"
+          private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
+          owner: "${{ github.repository_owner }}"
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          token: "${{ steps.app-token.outputs.token }}"
+
+      - name: Run Renovate
+        uses: renovatebot/github-action@39b914146caeff8cd512e61c8992f1d5913af85c # v46.2.5
         env:
-          LOG_LEVEL: "${{ inputs.logLevel || env.WORKFLOW_LOG_LEVEL }}"
-          RENOVATE_DRY_RUN: "${{ inputs.dryRun || env.WORKFLOW_DRY_RUN }}"
-          RENOVATE_REPOSITORIES: "${{ github.repository }}"
+          LOG_LEVEL: "${{ inputs.logLevel || 'debug' }}"
+          RENOVATE_AUTODISCOVER: true
+          RENOVATE_AUTODISCOVER_FILTER: "${{ github.repository }}"
+          RENOVATE_DRY_RUN: "${{ inputs.dryRun }}"
+          RENOVATE_INTERNAL_CHECKS_FILTER: strict
+          RENOVATE_PLATFORM: github
+          RENOVATE_PLATFORM_COMMIT: true
+        with:
+          token: "${{ steps.app-token.outputs.token }}"
+          renovate-version: "${{ inputs.version || 'latest' }}"
